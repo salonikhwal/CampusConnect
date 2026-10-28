@@ -253,9 +253,10 @@ CampusConnect/
 
 Developed with passion for the **MNIT Jaipur Campus Hackathon**.
 - **Developer**: Saloni Khandelwal ([@salonikhwal](https://github.com/salonikhwal))
+                 Hemlata Chopra([@Hemlata-chopda](https://github.com/Hemlata-chopda))
+                 Sankirat Kaur ([@Sankirat-Kaur](https://github.com/Sankirat-Kaur))
 - **Institute**: Malaviya National Institute of Technology (MNIT), Jaipur
 
----
 
-## 📄 License
-This project is licensed under the [MIT License](file:///Users/salonikhandelwal/Desktop/c2c/LICENSE).
+
+
