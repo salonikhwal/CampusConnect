@@ -247,8 +247,6 @@ CampusConnect/
 └── README.md                         # Project documentation
 ```
 
----
-
 ## 👥 Hackathon Team & Acknowledgements
 
 Developed with passion for the **MNIT Jaipur Campus Hackathon**.
