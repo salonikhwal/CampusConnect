@@ -1,0 +1,254 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                String   @id @default(uuid())
+  email             String   @unique
+  password          String
+  name              String
+  rollNumber        String   @unique
+  batchYear         Int?
+  department        String   @default("Computer Science & Engineering")
+  hostel            String?
+  roomNo            String?
+  labGroup          String?
+  phone             String?
+  bio               String?
+  about             String?
+  avatarUrl         String?
+  githubUrl         String?
+  linkedinUrl       String?
+  portfolioUrl      String?
+  skills            String?  // JSON serialized or comma-separated
+  interests         String?  // JSON serialized or comma-separated
+  openTo            String?  // JSON serialized or comma-separated
+  courses           String?  // e.g. "CS201,CS202,CS203,CS204"
+  currentlyLearning String?  // e.g. "Nachos OS scheduler, Distributed Raft"
+  projects          String?  // JSON array of project objects
+  privacySettings   String?  // JSON: { showContactDetails, showRoomNumber, allowDirectHi, showSchedule }
+  isOnboarded       Boolean  @default(false)
+  isAvailable       Boolean  @default(true)
+  currentStatus     String?  // e.g. "In CC-03 Lab till 5pm"
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  role              String   @default("student") // "admin", "student"
+
+  // Seniors & Guidance
+  isGuidanceProvider    Boolean  @default(false)
+  guidanceTopics        String?  // JSON serialized or comma-separated list of topics
+  guidanceBio           String?  // Short guidance note / area of focus
+  guidanceAvailability  String?  // Office hours or preferred contact times
+
+  posts             Post[]
+  comments          Comment[]
+  postLikes         PostLike[]
+
+  // Updates & Opportunities
+  submittedUpdates  UpdateItem[]
+  savedItems        SavedItem[]
+
+  // Messaging relations
+  sentMessages      Message[]       @relation("SentMessages")
+  conversations1    Conversation[]  @relation("Participant1")
+  conversations2    Conversation[]  @relation("Participant2")
+  
+  // Blocks
+  blockedUsers      Block[]         @relation("Blocker")
+  blockedByUsers    Block[]         @relation("Blocked")
+  
+  // Reports
+  reportsSubmitted  Report[]        @relation("Reporter")
+  reportsReceived   Report[]        @relation("Reported")
+
+  // Groups
+  groupMemberships  GroupMember[]
+  sentGroupMessages GroupMessage[]
+}
+
+model Post {
+  id           String     @id @default(uuid())
+  title        String?
+  content      String
+  codeSnippet  String?
+  codeLanguage String?    @default("c")
+  category     String     @default("Questions") // "Questions", "Projects", "College Life", "Opportunities"
+  tags         String?    // comma-separated e.g. "CS204,Nachos,Sphinx"
+  isPinned     Boolean    @default(false)
+  authorId     String
+  author       User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments     Comment[]
+  likes        PostLike[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model PostLike {
+  id        String   @id @default(uuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+}
+
+model Comment {
+  id        String    @id @default(uuid())
+  content   String
+  postId    String
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Conversation {
+  id                     String    @id @default(uuid())
+  participant1Id         String
+  participant2Id         String
+  participant1           User      @relation("Participant1", fields: [participant1Id], references: [id], onDelete: Cascade)
+  participant2           User      @relation("Participant2", fields: [participant2Id], references: [id], onDelete: Cascade)
+  
+  initiatorId            String    // User who initiated via "Say Hi"
+  hasRecipientReplied    Boolean   @default(false)
+  
+  // Status: "active", "ignored_by_p1", "ignored_by_p2"
+  status                 String    @default("active")
+  
+  participant1LastReadAt DateTime  @default(now())
+  participant2LastReadAt DateTime  @default(now())
+
+  lastMessageAt          DateTime  @default(now())
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  messages               Message[]
+
+  @@unique([participant1Id, participant2Id])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  content        String
+  isIcebreaker   Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+}
+
+model Group {
+  id            String         @id @default(uuid())
+  name          String
+  description   String?
+  category      String         @default("academic") // "academic", "hackathon", "hostel", "hobby"
+  avatarUrl     String?
+  createdById   String
+  lastMessageAt DateTime       @default(now())
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  members       GroupMember[]
+  messages      GroupMessage[]
+}
+
+model GroupMember {
+  id          String   @id @default(uuid())
+  groupId     String
+  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        String   @default("member") // "admin", "member"
+  status      String   @default("accepted") // "pending", "accepted", "declined"
+  invitedById String?
+  lastReadAt  DateTime @default(now())
+  joinedAt    DateTime @default(now())
+
+  @@unique([groupId, userId])
+}
+
+model GroupMessage {
+  id        String   @id @default(uuid())
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model Block {
+  id        String   @id @default(uuid())
+  blockerId String
+  blockedId String
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  reporterId  String
+  reportedId  String
+  reporter    User     @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reported    User     @relation("Reported", fields: [reportedId], references: [id], onDelete: Cascade)
+  reason      String   // "spam", "harassment", "inappropriate", "other"
+  details     String?
+  createdAt   DateTime @default(now())
+}
+
+model UpdateItem {
+  id           String      @id @default(uuid())
+  title        String
+  description  String
+  category     String      // "Announcements", "Academic Updates", "Events", "Opportunities"
+  organizer    String?     // e.g. "Dept of CSE", "Training & Placement Cell", "Sphinx Committee"
+  venue        String?     // e.g. "Computer Center 3", "VLTC Room 302", "Online"
+  deadline     DateTime?   // Deadline or event date
+  deadlineText String?     // e.g. "Nov 5, 2026 • 6:00 PM"
+  linkUrl      String?     // External URL or registration link
+  tags         String?     // Comma-separated tags
+  isOfficial   Boolean     @default(false)
+  authorId     String
+  author       User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  savedBy      SavedItem[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model SavedItem {
+  id           String     @id @default(uuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updateItemId String
+  updateItem   UpdateItem @relation(fields: [updateItemId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([userId, updateItemId])
+}
+
+model GuidanceFaq {
+  id           String   @id @default(uuid())
+  question     String
+  answer       String
+  category     String   // "Academics & Labs", "Skills & Projects", "Campus & Career"
+  topicTag     String?  // e.g. "Nachos OS Lab", "Competitive Programming"
+  seniorAuthor String?  // e.g. "Kartik Dave (4th Year CSE)"
+  createdAt    DateTime @default(now())
+}
+
